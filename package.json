@@ -1,0 +1,29 @@
+{
+  "name": "ts3-clientquery",
+  "version": "1.0.0",
+  "description": "An API wrapper for the teamspeak plugin \"ClientQuery\" to control your teamspeak via code.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RekkyRek/ts3-clientquery.git"
+  },
+  "keywords": [
+    "Teamspeak",
+    "ts3",
+    "Client",
+    "Query",
+    "ClientQuery"
+  ],
+  "author": "RekkyRek",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/RekkyRek/ts3-clientquery/issues"
+  },
+  "homepage": "https://github.com/RekkyRek/ts3-clientquery#readme",
+  "dependencies": {
+    "telnet-client": "^0.15.2"
+  }
+}
