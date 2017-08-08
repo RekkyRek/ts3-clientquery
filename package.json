@@ -24,6 +24,6 @@
   },
   "homepage": "https://github.com/RekkyRek/ts3-clientquery#readme",
   "dependencies": {
-    "telnet-client": "^0.15.2"
+    "promise": "^8.0.1",
   }
 }
