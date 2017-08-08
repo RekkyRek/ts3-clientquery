@@ -24,6 +24,6 @@
   },
   "homepage": "https://github.com/RekkyRek/ts3-clientquery#readme",
   "dependencies": {
-    "promise": "^8.0.1",
+    "promise": "^8.0.1"
   }
 }
