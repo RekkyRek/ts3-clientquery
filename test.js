@@ -7,8 +7,11 @@ var client = tssc.newQuery()
 
 client.connect('127.0.0.1', '25639', apikey)
     .then((data)=>{
-        console.log('data')
-        client.notifyOn('notifytalkstatuschange', 'schandlerid=1', (res)=>{
-            console.log(res.toString())
-        })
+        console.log(data)
+        setTimeout(()=>{
+            client.request('sendtextmessage targetmode=2 msg=Node.JS')
+                .then((res)=>{
+                console.log(res.toString())
+            });
+        }, 0)
     })

@@ -34,12 +34,25 @@ function ClientQuery() {
       })
   }
 
+  this.request = function(data) {
+    this.log('Request: ' + data)
+    return new Promise(function (resolve, reject) {
+      this.sock.write(data + '\n', 'utf8', (res) => {
+        this.log('Sent: '+data)
+        this.sock.on('data', (data) => {
+          this.sock.on('data', this.handleMessage)
+          resolve(data)
+        })
+      })
+    }.bind(this));
+  }
+
   this.send = function(data) {
     this.log('Send: ' + data)
     return new Promise(function (resolve, reject) {
       this.sock.write(data + '\n', 'utf8', (res) => {
         this.log('Sent: '+data)
-        resolve(res);
+        resolve(res)
       })
     }.bind(this));
   }
