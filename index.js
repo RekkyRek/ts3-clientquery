@@ -5,42 +5,52 @@ const Promise = require('promise');
 function ClientQuery() {
   this.state = 0; /* <0 Not connected | 1 Connecting | 2 Connected no auth | 3 Connected and auth | 4 Connection Failed> */
   this.actions = {};
+  this.actionsLastCall = {};
   this.debug = true;
   this.onMessage = function(data){};
 
   this.log = function(msg) {
-    if(this.debug) {console.log(msg)}
+    if(!this.debug) {console.log(msg)}
   }
 
   this.parse = function(res) {
     let rawStrings = res.toString().split("|")
-      let parsedObjects = [];
-      rawStrings.forEach(function(str) {
-        let tempobj = {};
-        str.split('\n\r')[0].split(" ").forEach(function(vari) {
-          if(vari.indexOf("=") > -1) {
-            tempobj[vari.split("=")[0]] = vari.split("=")[1].replaceAll("\\\\s", " ");
-          }
-        })
+    let parsedObjects = [];
+    rawStrings.forEach(function(str) {
+      let tempobj = {};
+      str.split('\n\r')[0].split(" ").forEach(function(vari) {
+        if(vari.indexOf("=") > -1) {
+          tempobj[vari.split("=")[0]] = vari.split("=")[1].replaceAll("\\\\s", " ");
+        }
+      })
+      if(rawStrings.length > 1) {
         parsedObjects.push(tempobj)
-      }, this);
-      return parsedObjects;
-
+      } else {
+        parsedObjects = tempobj;
+      }
+    }, this);
+    return parsedObjects;
   }
 
   this.handleMessage = function(msg) {
+    this.log(this.actions)
     if(this.actions.hasOwnProperty(msg.toString().split(" ")[0])) {
-      this.actions[msg.toString().split(" ")[0]](msg);
+      if(this.actionsLastCall[msg.toString().split(" ")[0]] != msg.toString()) {
+        this.actionsLastCall[msg.toString().split(" ")[0]] = msg.toString();
+        this.actions[msg.toString().split(" ")[0]](msg);
+      }
     } else {
       this.onMessage(msg);
     }
   }.bind(this)
 
   this.notifyOn = function(action, args, callback) {
+    if(this.actions[action] == callback) {
+      return;
+    }
+    console.log('meme')
+    this.actions[action] = callback;    
     this.send(`clientnotifyregister event=${action} ${args}`)
-      .then(()=>{
-        this.actions[action] = callback;
-      })
   }
 
   this.notifyOff = function(action, args) {
@@ -55,10 +65,17 @@ function ClientQuery() {
     return new Promise(function (resolve, reject) {
       this.sock.write(data + '\n', 'utf8', (res) => {
         this.log('Sent: '+data)
-        this.sock.on('data', (data) => {
-          this.sock.on('data', this.handleMessage)
-          resolve(data)
-        })
+
+        let func = (data) => {
+          if(data.toString() != 'error id=0 msg=ok\n\r') {
+            resolve(data)
+            this.sock.removeListener('data', func)
+            this.sock.on('data', this.handleMessage)
+          }
+        }
+
+        this.sock.removeListener('data', this.handleMessage)
+        this.sock.on('data', func)
       })
     }.bind(this));
   }
