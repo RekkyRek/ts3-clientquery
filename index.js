@@ -13,6 +13,9 @@ function ClientQuery() {
   }
 
   this.handleMessage = function(msg) {
+    if(this.state != 3) {
+      this.state = 3;
+    }
     if(this.actions.hasOwnProperty(msg.toString().split(" ")[0])) {
       this.actions[msg.toString().split(" ")[0]](msg);
     } else {
@@ -68,7 +71,6 @@ function ClientQuery() {
         this.log('connected');
         this.send(`auth apikey=${apikey}`)
           .then(()=>{
-            this.state = 3;
             resolve(this)
           })
       });
