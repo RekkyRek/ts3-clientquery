@@ -12,6 +12,22 @@ function ClientQuery() {
     if(this.debug) {console.log(msg)}
   }
 
+  this.parse = function(res) {
+    let rawStrings = res.toString().split("|")
+      let parsedObjects = [];
+      rawStrings.forEach(function(str) {
+        let tempobj = {};
+        str.split('\n\r')[0].split(" ").forEach(function(vari) {
+          if(vari.indexOf("=") > -1) {
+            tempobj[vari.split("=")[0]] = vari.split("=")[1].replaceAll("\\\\s", " ");
+          }
+        })
+        parsedObjects.push(tempobj)
+      }, this);
+      return parsedObjects;
+
+  }
+
   this.handleMessage = function(msg) {
     if(this.actions.hasOwnProperty(msg.toString().split(" ")[0])) {
       this.actions[msg.toString().split(" ")[0]](msg);
