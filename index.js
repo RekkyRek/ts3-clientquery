@@ -4,7 +4,7 @@ const Promise = require('promise');
    
 function ClientQuery() {
   this.state = 0; /* <0 Not connected | 1 Connecting | 2 Connected no auth | 3 Connected and auth | 4 Connection Failed> */
-  this.actions = {};
+  let actions = this.actions = {};
   this.actionsLastCall = {};
   this.debug = true;
   this.onMessage = function(data){};
@@ -20,7 +20,7 @@ function ClientQuery() {
       let tempobj = {};
       str.split('\n\r')[0].split(" ").forEach(function(vari) {
         if(vari.indexOf("=") > -1) {
-          tempobj[vari.split("=")[0]] = vari.split("=")[1].replaceAll("\\\\s", " ");
+          tempobj[vari.split("=")[0]] = vari.substring(vari.indexOf('=')+1, vari.length).replaceAll("\\\\s", " ");
         }
       })
       if(rawStrings.length > 1) {
@@ -33,7 +33,6 @@ function ClientQuery() {
   }
 
   this.handleMessage = function(msg) {
-    this.log(this.actions)
     if(this.actions.hasOwnProperty(msg.toString().split(" ")[0])) {
       if(this.actionsLastCall[msg.toString().split(" ")[0]] != msg.toString()) {
         this.actionsLastCall[msg.toString().split(" ")[0]] = msg.toString();
@@ -45,15 +44,13 @@ function ClientQuery() {
   }.bind(this)
 
   this.notifyOn = function(action, args, callback) {
-    if(this.actions[action] == callback) {
-      return;
-    }
-    console.log('meme')
-    this.actions[action] = callback;    
+    console.log('Register notify '+action)
+    this.actions[action] = callback;
     this.send(`clientnotifyregister event=${action} ${args}`)
   }
 
   this.notifyOff = function(action, args) {
+    console.log('Unregister notify '+action)
     this.send(`clientnotifyunregister event=${action} ${args}`)
       .then(()=>{
         this.actions[action] = undefined;
@@ -64,7 +61,7 @@ function ClientQuery() {
     this.log('Request: ' + data)
     return new Promise(function (resolve, reject) {
       this.sock.write(data + '\n', 'utf8', (res) => {
-        this.log('Sent: '+data)
+        console.log('Sent: '+data)
 
         let func = (data) => {
           if(data.toString() != 'error id=0 msg=ok\n\r') {
@@ -82,6 +79,8 @@ function ClientQuery() {
 
   this.send = function(data) {
     this.log('Send: ' + data)
+    this.sock.removeListener('data', this.handleMessage)
+    this.sock.on('data', this.handleMessage)
     return new Promise(function (resolve, reject) {
       this.sock.write(data + '\n', 'utf8', (res) => {
         this.log('Sent: '+data)
@@ -90,23 +89,55 @@ function ClientQuery() {
     }.bind(this));
   }
 
-  this.connect = function(host, port, apikey){
+  this.reInitActions = function() {
+    let act = this.actions;
+    console.log('actions', Object.keys(act))
+    Object.keys(act).forEach(function(key) {
+        console.log('addNotifyMemes Lol', key, 'schandlerid=1', typeof(act[key]))
+        this.notifyOn(key, 'schandlerid=1', act[key])
+    }.bind(this));
+  }
+
+  this.reconnects = 0;
+
+  setInterval(()=>{
+    this.reconnects--;
+  }, 1000);
+
+  this.connect = function(host, port, apikey) {
     return new Promise(function (resolve, reject) {
-      this.state = 1;
-      let sock = this.sock = new net.Socket();
-      sock.connect(port, host);
+      if(this.reconnects < 5) {
+        this.reconnects++;
+        this.state = 1;
+        let sock = this.sock = new net.Socket();
 
-      sock.on('connect', () => {
-        this.state = 2;
-        this.log('connected');
-        this.send(`auth apikey=${apikey}`)
-          .then(()=>{
-            resolve(this)
-            this.state = 3;
-          })
-      });
+        sock.connect(port, host);
 
-      sock.on('data', this.handleMessage);
+        sock.on('connect', () => {
+          this.state = 2;
+          sock.setTimeout(0);
+          this.log('connected');
+          this.send(`auth apikey=${apikey}`)
+            .then(()=>{
+              resolve(this)
+              this.state = 3;
+              setTimeout(()=>{
+                this.reInitActions(actions);
+              },100);
+            })
+        });
+
+        
+        sock.on('close', () => {
+          console.log('con closed, reopen')
+          sock.destroy();
+          this.connect(port, host, apikey);
+        });
+
+        sock.on('data', this.handleMessage);
+      } else {
+        setTimeout(() => {this.connect(host, port, apikey)}, 3000);
+      }
     }.bind(this));
   }
 }
