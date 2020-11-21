@@ -57,23 +57,25 @@ function ClientQuery() {
       })
   }
 
-  this.request = function(data) {
+  this.request = function (data) {
     this.log('Request: ' + data)
     return new Promise(function (resolve, reject) {
-      this.sock.write(data + '\n', 'utf8', (res) => {
-        console.log('Sent: '+data)
-
+        let recived = "";
         let func = (data) => {
-          if(data.toString() != 'error id=0 msg=ok\n\r') {
-            resolve(data)
-            this.sock.removeListener('data', func)
-            this.sock.on('data', this.handleMessage)
-          }
+            var datastr = data.toString();
+            if ( datastr.includes('error id=') ) {
+                resolve(datastr);
+                this.sock.removeListener('data', func);
+                this.sock.on('data', this.handleMessage);
+            }else{
+                recived += datastr;
+            }
         }
-
-        this.sock.removeListener('data', this.handleMessage)
-        this.sock.on('data', func)
-      })
+        this.sock.removeListener('data', this.handleMessage);
+        this.sock.on('data', func);
+        this.sock.write(data + '\n', 'utf8', (res) => {
+            console.log('Sent: ' + data);
+        })
     }.bind(this));
   }
 
@@ -117,16 +119,19 @@ function ClientQuery() {
           this.state = 2;
           sock.setTimeout(0);
           this.log('connected');
-          this.send(`auth apikey=${apikey}`)
-            .then(()=>{
-              resolve(this)
-              this.state = 3;
-              setTimeout(()=>{
-                this.reInitActions(actions);
-              },100);
-            })
+          this.request(`auth apikey=${apikey}`)
+          .then((resp) => {
+              if (resp.includes('id=0')) {
+                  resolve(this);
+                  this.state = 3;
+                  setTimeout(() => {
+                      this.reInitActions(actions);
+                  }, 100);
+              }else{
+                  reject("Error connecting");
+              }
+          });
         });
-
         
         sock.on('close', () => {
           console.log('con closed, reopen')
