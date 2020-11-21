@@ -60,15 +60,14 @@ function ClientQuery() {
   this.request = function (data) {
     this.log('Request: ' + data)
     return new Promise(function (resolve, reject) {
-        let recived = "";
+        let received = "";
         let func = (data) => {
             var datastr = data.toString();
+            received += datastr;
             if ( datastr.includes('error id=') ) {
-                resolve(datastr);
+                resolve(received);
                 this.sock.removeListener('data', func);
                 this.sock.on('data', this.handleMessage);
-            }else{
-                recived += datastr;
             }
         }
         this.sock.removeListener('data', this.handleMessage);
